@@ -1,5 +1,4 @@
 import arcpy
-import matplotlib
 
 """Workflow in arcpy to threshold a MultiSpectral image by SAVI and then extract spectral data from 
     thresholded images.
