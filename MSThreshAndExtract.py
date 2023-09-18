@@ -1,43 +1,53 @@
+# Imports
 import arcpy
+import pandas as pd
+import os
 
 """Workflow in arcpy to threshold a MultiSpectral image by SAVI and then extract spectral data from 
-    thresholded images.
+    thresholded images. Visual inspection of data rasters with multiple indices suggests that SAVI 
+    produces the most contrast between plots and background.
 
 # Input:
     Shapefile - .shp that defines experimental field plots
     5 Rasters from MS remote Sensing (R, G, B, NIR, RE) - .tif
 
 # Output:
-    5 csv tables of spectral data from thresholded rasters - one for each MS band 
+    - Multiple supplemental files (one for each band + one of filter statistics)
+    - One Concatenated csv of plot level information for each band + filter stats
 
 # Operation: arcpy is a closed source python library so the easiest way to run this script is by 
-            opening a python script or notebook directly in arcgis pro and then copy paste in.
-
+            opening a python script or notebook directly in arcgis pro and then copy paste in. 
+            Insert in your own path, shapefile (.dbf), raster file names, output for csvs, and date(as string).
+            Threshold parameter adjusts filtering. 0 for no filter. At approx 0.35, plant material is 
+            starting to be lost.
 """
 
 ############### Insert your own parameters below #########################
 
 # Set environment/working directory - the folder with rasters 
-arcpy.env.workspace = r"C:\Users\bdub\Desktop\2021HIPS_Orthophotos\8_10_21\Maize_GXE_08_10_2021_MS2"
-
+path = r"C:\Users\bdub\Desktop\RemoteSensingData\2022WiDiv\20220616_MS"
 # Load shape file describing field plots
-shapefile = r"C:\Users\bdub\OneDrive - Michigan State University\RemoteSensing\ShapeFiles\Projected\2021HIPS_buff_project.shp"
+shapefile = r"C:\Users\bdub\OneDrive - Michigan State University\RemoteSensing\ShapeFiles\Projected\2022HIPSWiDiv_buff_project.dbf"
 # Create a feature layer from the shapefile
-HIPS = arcpy.management.MakeFeatureLayer(shapefile, "HIPS")
+arcpy.management.MakeFeatureLayer(shapefile)
 
 # Text strings of the 5 individuals MS rasters
-redfile = 'Maize_GXE_08_10_2021_MS2_transparent_reflectance_red.tif'
-greenfile = 'Maize_GXE_08_10_2021_MS2_transparent_reflectance_green.tif'
-bluefile = 'Maize_GXE_08_10_2021_MS2_transparent_reflectance_blue.tif'
-nirfile = 'Maize_GXE_08_10_2021_MS2_transparent_reflectance_nir.tif'
-rededgefile = 'Maize_GXE_08_10_2021_MS2_transparent_reflectance_red edge.tif'
+redfile = 'Thompson_Maize_06_16_2022_MS_transparent_reflectance_red.tif'
+greenfile = 'Thompson_Maize_06_16_2022_MS_transparent_reflectance_green.tif'
+bluefile = 'Thompson_Maize_06_16_2022_MS_transparent_reflectance_blue.tif'
+nirfile = 'Thompson_Maize_06_16_2022_MS_transparent_reflectance_nir.tif'
+rededgefile = 'Thompson_Maize_06_16_2022_MS_transparent_reflectance_red edge.tif'
 
 # Directory to save csv files to
-dir_for_csvs = r"C:\Users\bdub\Desktop\2021HIPS_Orthophotos"
+dir_for_csvs = r"C:\Users\bdub\Desktop\RemoteSensingData\2022WiDiv\20220616_MS"
+date = '20220616_MS'
+# Threshold to filter out pixels based on SAVI value, usually 0.05 - 0.35
+threshold = 0.05
 
 #########################################################################################
 ################### Everything below here automated #####################################
 ####################################################################################
+arcpy.env.workspace = path
 # Load as Raster Objects
 redraster = arcpy.Raster(redfile)
 greenraster = arcpy.Raster(greenfile)
@@ -49,20 +59,15 @@ rasters = [redraster, greenraster, blueraster, nirraster, rededgeraster]
 # Composite MS rasters into 1
 arcpy.management.CompositeBands(rasters, 'Composite5Band.tif')
 
-# Load the composite you just made
-Composite5Band = arcpy.Raster('Composite5Band.tif')
-
 # Calculated SAVI with the NIRband(#4) and Red band(#1) 
 SAVI_raster = arcpy.ia.SAVI("Composite5Band.tif", 4, 1, 0.5)
 
-# Create mask to threshold with
-SAVI_mask = (SAVI_raster > 0.35)
-SAVI_mask.save('SAVI35mask.tif')
-
+# Create mask to threshold with, early in season it needs to be very relaxed limit
+SAVI_mask = (SAVI_raster > threshold)
 # Set all values that did not pass threshold to NA, important destinction from 0 I learned
 SAVI35extract = arcpy.sa.ExtractByAttributes(SAVI_mask, 'VALUE = 1')
 
-# Use raster map algebra to apply mask
+# Use raster map algebra to apply mask to each band
 red_filtered = redraster * SAVI35extract
 green_filtered = greenraster * SAVI35extract
 blue_filtered = blueraster * SAVI35extract
@@ -73,12 +78,15 @@ rededge_filtered = rededgeraster * SAVI35extract
 inZone = shapefile
 zoneField = 'id'
 MSList = ['Red', 'Green', 'Blue', 'NIR', 'RedEdge']
+# Create empty list to store csv files for later
+csvs = []
 
 # For each band extract reflectance per zone(polygon) convert to csv
 for i in range(5):
     InRast = rasters[i]
     OutTab_dbf = MSList[i] + 'Table.dbf'
     OutTab_csv = MSList[i] + 'Table.csv'
+    csvs.append(OutTab_csv)
     arcpy.sa.ZonalStatisticsAsTable(in_zone_data=inZone,
                                    zone_field=zoneField,
                                    in_value_raster=InRast,
@@ -91,5 +99,21 @@ arcpy.sa.ZonalStatisticsAsTable(in_zone_data=shapefile,
                                    in_value_raster=SAVI_mask,
                                    out_table = 'SAVIMASKTable.dbf')
 arcpy.TableToTable_conversion('SAVIMASKTable.dbf', dir_for_csvs, 'SAVIMASKTable.csv')
+csvs.append('SAVIMASKTable.csv')
 
-# Will have to merge and organize these two sets of tables after. Struggled to alter zonal stat types for some reason.
+os.chdir(dir_for_csvs)
+
+# Loop, add column ID and concat
+data_frames = []
+for c in csvs:
+    df = pd.read_csv(c)
+    df['Source'] = date + '_' + c[:-9]
+    data_frames.append(df)
+
+Concat_df = pd.concat(data_frames, ignore_index=True)
+
+# make df_mask look like df_reflectance
+Concat_df.drop(columns = ['VARIETY', 'MAJORITY', 'MINORITY'], inplace=True)
+
+out_concat = date + 'Concat.csv'
+Concat_df.to_csv(out_concat, index = False)
