@@ -8,7 +8,7 @@ import os
     produces the most contrast between plots and background.
 
 # Input:
-    Shapefile - .shp that defines experimental field plots
+    Shapefile - .dbf that defines experimental field plots
     5 Rasters from MS remote Sensing (R, G, B, NIR, RE) - .tif
 
 # Output:
