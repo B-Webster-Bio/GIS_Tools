@@ -18,8 +18,7 @@ import os
 # Operation: arcpy is a closed source python library so the easiest way to run this script is by 
             opening a python script or notebook directly in arcgis pro and then copy paste in. 
             Insert in your own path, shapefile (.dbf), raster file names, output for csvs, and date(as string).
-            Threshold parameter adjusts filtering. 0 for no filter. At approx 0.35, plant material is 
-            starting to be lost.
+            Threshold parameter adjusts filtering. 0 for no filter. A value around 0.29 works for most days but not all. 
 """
 
 ############### Insert your own parameters below #########################
