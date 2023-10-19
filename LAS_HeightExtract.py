@@ -17,16 +17,16 @@ import arcpy
 
 ############### Insert your own parameters below #########################
 
-arcpy.env.workspace = r'C:\Users\bdub\Desktop\RemoteSensingData\2020HIPS_Orthophotos\8_18_2020'
+arcpy.env.workspace = r'C:\Users\bdub\Desktop\RemoteSensingData\2020HIPS_Orthophotos\6_19_2020'
 shapefile = r"C:\Users\bdub\OneDrive - Michigan State University\RemoteSensing\ShapeFiles\Projected\2020HIPS_ShapeFinal.dbf"
 # Create a feature layer from the shapefile
 arcpy.management.MakeFeatureLayer(shapefile)
 # point to las file(s)
-inLas = r'C:\Users\bdub\Desktop\RemoteSensingData\2020HIPS_Orthophotos\8_18_2020'
+inLas = r'C:\Users\bdub\Desktop\RemoteSensingData\2020HIPS_Orthophotos\6_19_2020'
 # name for lasdata set to be made
 lasdata = 'HIPS2020.lasd'
 # Now load our digital elevation model 
-dem_p = r'C:\Users\bdub\Desktop\RemoteSensingData\2020HIPS_Orthophotos\GroundModel\PointCloudDEM.tif'
+dem_p = r'C:\Users\bdub\Desktop\RemoteSensingData\2020HIPS_Orthophotos\GroundModel\PointCloudDEM_0.5.tif'
 dem = arcpy.Raster(dem_p)
 
 #########################################################################################
@@ -35,12 +35,16 @@ dem = arcpy.Raster(dem_p)
 
 # load las
 arcpy.management.CreateLasDataset(inLas, lasdata)
+# Classify points which are below ground DEM as noise
+arcpy.ddd.ClassifyLasNoise(lasdata, method = 'RELATIVE_HEIGHT', withheld = 'WITHHELD', ground = dem, low_z = '0 feet')
+
 # classify ground to keep out of calculation
 arcpy.ddd.ClassifyLasGround(lasdata)
 # After classifying ground everything else should still be unclassified so we can filter out ground points
 # 1 - unclassified
-# 2 - ground, and so on
-canopy_las = arcpy.management.MakeLasDatasetLayer(lasdata, "ground_filter", class_code=[1])
+# 2 - ground
+# 7 Noise
+canopy_las = arcpy.management.MakeLasDatasetLayer(lasdata, "QC_filter", class_code=[1, 7])
 arcpy.management.MakeLasDatasetLayer(canopy_las)
 
 # Conver LAS to raster based on elevation
