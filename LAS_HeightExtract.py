@@ -3,7 +3,7 @@ import arcpy
 """Script in arcpy to generate mean, median, 90th percentile heights from point cloud data.
 
 # Input:
-    Shapefile - .shp that defines experimental field plots
+    Shapefile - .dbf that defines experimental field plots
     LAS file - point cloud file from natural color or lidar 
     Ground elevation model raster - a .tif file that maps the elevation of the field.
 
