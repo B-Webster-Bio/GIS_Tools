@@ -24,9 +24,9 @@ import os
 ############### Insert your own parameters below #########################
 
 # Set environment/working directory - the folder with rasters 
-path = r"C:\Users\bdub\Desktop\RemoteSensingData\2022WiDiv\20220616_MS"
+path = r"C:\"
 # Load shape file describing field plots
-shapefile = r"C:\Users\bdub\OneDrive - Michigan State University\RemoteSensing\ShapeFiles\Projected\2022HIPSWiDiv_buff_project.dbf"
+shapefile = r"C:\"
 # Create a feature layer from the shapefile
 arcpy.management.MakeFeatureLayer(shapefile)
 
@@ -38,7 +38,7 @@ nirfile = 'Thompson_Maize_06_16_2022_MS_transparent_reflectance_nir.tif'
 rededgefile = 'Thompson_Maize_06_16_2022_MS_transparent_reflectance_red edge.tif'
 
 # Directory to save csv files to
-dir_for_csvs = r"C:\Users\bdub\Desktop\RemoteSensingData\2022WiDiv\20220616_MS"
+dir_for_csvs = r"C:"
 date = '20220616_MS'
 # Threshold to filter out pixels based on SAVI value, usually 0.05 - 0.35
 threshold = 0.05

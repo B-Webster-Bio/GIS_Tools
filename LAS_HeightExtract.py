@@ -17,16 +17,16 @@ import arcpy
 
 ############### Insert your own parameters below #########################
 
-arcpy.env.workspace = r'C:\Users\bdub\Desktop\RemoteSensingData\2020HIPS_Orthophotos\6_19_2020'
-shapefile = r"C:\Users\bdub\OneDrive - Michigan State University\RemoteSensing\ShapeFiles\Projected\2020HIPS_ShapeFinal.dbf"
+arcpy.env.workspace = r'C:\'
+shapefile = r'C:\'
 # Create a feature layer from the shapefile
 arcpy.management.MakeFeatureLayer(shapefile)
 # point to las file(s)
-inLas = r'C:\Users\bdub\Desktop\RemoteSensingData\2020HIPS_Orthophotos\6_19_2020'
+inLas = r'C:\'
 # name for lasdata set to be made
-lasdata = 'HIPS2020.lasd'
+lasdata = 'NAME_YEAR.lasd'
 # Now load our digital elevation model 
-dem_p = r'C:\Users\bdub\Desktop\RemoteSensingData\2020HIPS_Orthophotos\GroundModel\PointCloudDEM_0.5.tif'
+dem_p = r'C:'
 dem = arcpy.Raster(dem_p)
 
 #########################################################################################
