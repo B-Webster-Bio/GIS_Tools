@@ -1,5 +1,3 @@
-import arcpy
-
 """Script in arcpy to generate mean, median, 90th percentile heights from point cloud data.
 
 # Input:
@@ -15,8 +13,8 @@ import arcpy
             Insert in your own parameters. 
 """
 
+import arcpy
 ############### Insert your own parameters below #########################
-
 arcpy.env.workspace = r'C:\'
 shapefile = r'C:\'
 # Create a feature layer from the shapefile
@@ -29,14 +27,14 @@ lasdata = 'NAME_YEAR.lasd'
 dem_p = r'C:'
 dem = arcpy.Raster(dem_p)
 
+# load las - look at file and see if there are any noise before continuing
+arcpy.management.CreateLasDataset(inLas, lasdata)
+#Classify noise and look at data before continuing, can add a high_z param to help filter
+arcpy.ddd.ClassifyLasNoise(lasdata, method = 'RELATIVE_HEIGHT', withheld = 'WITHHELD', ground = dem, low_z = '0 feet')
+
 #########################################################################################
 ################### Everything below here automated #####################################
 ####################################################################################
-
-# load las
-arcpy.management.CreateLasDataset(inLas, lasdata)
-# Classify points which are below ground DEM as noise
-arcpy.ddd.ClassifyLasNoise(lasdata, method = 'RELATIVE_HEIGHT', withheld = 'WITHHELD', ground = dem, low_z = '0 feet')
 
 # classify ground to keep out of calculation
 arcpy.ddd.ClassifyLasGround(lasdata)
@@ -44,7 +42,7 @@ arcpy.ddd.ClassifyLasGround(lasdata)
 # 1 - unclassified
 # 2 - ground
 # 7 Noise
-canopy_las = arcpy.management.MakeLasDatasetLayer(lasdata, "QC_filter", class_code=[1, 7])
+canopy_las = arcpy.management.MakeLasDatasetLayer(lasdata, "QC_filter", class_code=[1])
 arcpy.management.MakeLasDatasetLayer(canopy_las)
 
 # Conver LAS to raster based on elevation
@@ -63,4 +61,5 @@ plantht = cellht - dem
 arcpy.sa.ZonalStatisticsAsTable(in_zone_data = shapefile,
                                zone_field = 'id',
                                in_value_raster = plantht,
+                               percentile_values = [5, 25, 90, 99],
                                out_table = 'AutoHeights.dbf')
