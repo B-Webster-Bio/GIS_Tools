@@ -22,31 +22,29 @@ import os
 """
 
 ############### Insert your own parameters below #########################
-
 # Set environment/working directory - the folder with rasters 
-path = r"C:\"
+path = r""
 # Load shape file describing field plots
-shapefile = r"C:\"
+shapefile = r""
 # Create a feature layer from the shapefile
 arcpy.management.MakeFeatureLayer(shapefile)
 
 # Text strings of the 5 individuals MS rasters
-redfile = 'Thompson_Maize_06_16_2022_MS_transparent_reflectance_red.tif'
-greenfile = 'Thompson_Maize_06_16_2022_MS_transparent_reflectance_green.tif'
-bluefile = 'Thompson_Maize_06_16_2022_MS_transparent_reflectance_blue.tif'
-nirfile = 'Thompson_Maize_06_16_2022_MS_transparent_reflectance_nir.tif'
-rededgefile = 'Thompson_Maize_06_16_2022_MS_transparent_reflectance_red edge.tif'
+redfile = ''
+greenfile = ''
+bluefile = ''
+nirfile = ''
+rededgefile = ''
+
+# Threshold to filter out pixels based on SAVI value, usually 0 - 0.35
+threshold = 0.25
 
 # Directory to save csv files to
-dir_for_csvs = r"C:"
-date = '20220616_MS'
-# Threshold to filter out pixels based on SAVI value, usually 0.05 - 0.35
-threshold = 0.05
+dir_for_csvs = r""
+date = ''
 
-#########################################################################################
-################### Everything below here automated #####################################
-####################################################################################
 arcpy.env.workspace = path
+
 # Load as Raster Objects
 redraster = arcpy.Raster(redfile)
 greenraster = arcpy.Raster(greenfile)
@@ -72,6 +70,10 @@ green_filtered = greenraster * SAVI35extract
 blue_filtered = blueraster * SAVI35extract
 nir_filtered = nirraster * SAVI35extract
 rededge_filtered = rededgeraster * SAVI35extract
+
+################################################
+###### STOP AND INSPECT MAPS - adjust thresh if need ##
+################################################
 
 # variables for zonal extract
 inZone = shapefile

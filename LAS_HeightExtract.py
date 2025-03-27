@@ -14,52 +14,79 @@
 """
 
 import arcpy
+import os
+
 ############### Insert your own parameters below #########################
-arcpy.env.workspace = r'C:\'
-shapefile = r'C:\'
+# set working directory - everything will be relative to this directory
+path = r''
+arcpy.env.workspace = path
+
+# shapefile
+shapefile = 'some_polygon.shp'
+# check that file exists - QC
+print(arcpy.Exists(shapefile))
 # Create a feature layer from the shapefile
 arcpy.management.MakeFeatureLayer(shapefile)
-# point to las file(s)
-inLas = r'C:\'
-# name for lasdata set to be made
-lasdata = 'NAME_YEAR.lasd'
+
+# point to las file or directory if files
+inLas = r''
+# name for lasdata set to be made - you choose
+lasdata = ''
 # Now load our digital elevation model 
-dem_p = r'C:'
+dem_p = r''
 dem = arcpy.Raster(dem_p)
 
-# load las - look at file and see if there are any noise before continuing
+# make lasdataset object
 arcpy.management.CreateLasDataset(inLas, lasdata)
-#Classify noise and look at data before continuing, can add a high_z param to help filter
-arcpy.ddd.ClassifyLasNoise(lasdata, method = 'RELATIVE_HEIGHT', withheld = 'WITHHELD', ground = dem, low_z = '0 feet')
 
-#########################################################################################
-################### Everything below here automated #####################################
-####################################################################################
+# Extract LAS points within shapefile boundary - big speed boost
+arcpy.ddd.ExtractLas(lasdata, path, shapefile, boundary = shapefile,
+                    out_las_dataset = 'clipped_lasdata.lasd')
 
-# classify ground to keep out of calculation
-arcpy.ddd.ClassifyLasGround(lasdata)
-# After classifying ground everything else should still be unclassified so we can filter out ground points
-# 1 - unclassified
-# 2 - ground
-# 7 Noise
-canopy_las = arcpy.management.MakeLasDatasetLayer(lasdata, "QC_filter", class_code=[1])
-arcpy.management.MakeLasDatasetLayer(canopy_las)
+clipped_lasdata = 'clipped_lasdata.lasd'
+# output parameters
+out_p = r''
+date = r''
 
-# Conver LAS to raster based on elevation
+#################################################################
+# Processing and Quality Control steps
+# 1. Classify LAS noise on the clipped dataset
+arcpy.ddd.ClassifyLasNoise(clipped_lasdata, method='RELATIVE_HEIGHT', edit_las='CLASSIFY',
+                           ground=dem, low_z=-0.25, high_z=5)
+
+# 2. classify ground 
+arcpy.ddd.ClassifyLasGround(clipped_lasdata)
+
+# 3. select only the points that are not noise and not ground,
+canopy_las = arcpy.management.MakeLasDatasetLayer(
+    clipped_lasdata, "QC_filter", class_code=[1])
+
+
+############################################################
+######## Stop and Inspect Raster for abnormalities #########
+############################################################
+
+# Calculate plot ht based on diff between dem and canopy_las
+# Convert LAS to raster based on elevation
 arcpy.conversion.LasDatasetToRaster(in_las_dataset = canopy_las, 
                                     out_raster = 'CellHeightsAuto.tif',
                                     value_field = 'ELEVATION',
                                     sampling_type = 'CELLSIZE',
                                     sampling_value = 0.25)
 
-
+# make variable
 cellht = arcpy.Raster('CellHeightsAuto.tif')
 
 # raster algebra to subtract Cellheights from DEM to produce plants heights
 plantht = cellht - dem
 
+# Zonal stats to summarize results on within shapefile polygons
 arcpy.sa.ZonalStatisticsAsTable(in_zone_data = shapefile,
                                zone_field = 'id',
                                in_value_raster = plantht,
                                percentile_values = [5, 25, 90, 99],
                                out_table = 'AutoHeights.dbf')
+
+# path to save csv results
+out_csv = os.path.join(date, 'AutoHt.csv')
+arcpy.TableToTable_conversion('AutoHeights.dbf', out_p, out_csv)
